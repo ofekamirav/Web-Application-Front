@@ -1,0 +1,24 @@
+/* Set the height of the html and body to 100% */
+html, body {
+    height: 100%;
+    margin: 0;
+  }
+  
+  /* The app-container should take the full height of the page */
+  .app-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+  
+  /* The content-wrap should take the remaining space */
+  .content-wrap {
+    flex: 1;
+  }
+  
+  /* The footer should be at the bottom */
+  footer {
+    background-color: #f1f1f1;
+    padding: 10px;
+    text-align: center;
+  }
