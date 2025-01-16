@@ -1,55 +1,56 @@
 .navbar {
-    background-color: #f2f2f2;
-    padding: 10px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  
-  .navbar-brand {
-    font-size: 24px;
-    font-weight: bold;
-    color: #ba9771;
-  }
-  
-  .search-container {
-    display: flex;
-  }
-  
-  .search-input {
-    padding: 10px;
-    border: 1px solid #ccc;
-  }
-  
-  .search-button {
-    padding: 10px;
-    background-color: #A3D0C1;
-    color: white;
-    border: 1px solid #ccc;
-    border-left: none;
-    cursor: pointer;
-  }
-  
-  .nav-links {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-  }
-  
-  .nav-link {
-    text-decoration: none;
-    color: #333;
-  }
+  background-color: #f8f9fa;
+  padding: 10px;
+}
 
-  .login-btn {
-    width: 100%;
-    padding: 12px 20px;
-    background: #A3D0C1;
-    color: black;
-    font-size: 16px;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background 0.3s ease-in-out;
+.navbar-brand {
+  display: flex;
+  align-items: center;
+  font-size: 24px;
+  font-weight: bold;
+  color: black;
+}
+
+.navbar-brand:hover{
+  color: black;
+}
+
+.nav-link {
+  font-size: 16px;
+  padding: 0 15px;
+  text-decoration: none;
+  color: #333;
+  line-height: 38px; 
+  display: inline-flex;
+  align-items: center;
+}
+
+.nav-link:hover {
+  color: #ba9771;
+}
+
+.login-btn {
+  padding: 0 15px;
+  background: #ba9771;
+  color: white;
+  font-size: 16px;
+  font-weight: bold;
+  border: none;
+  border-radius: 5px;
+  line-height: 38px; 
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 38px; 
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.login-btn:hover {
+  background: #d4b294;
+}
+
+.d-flex.align-items-center {
+  align-items: center; 
 }
