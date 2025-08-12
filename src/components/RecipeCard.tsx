@@ -10,7 +10,7 @@ export const RecipeCard = ({ recipe }: RecipeCardProps) => {
   const img =
     recipe.imageUrl || "https://placehold.co/800x600/eee/777?text=Recipe+Image";
   const authorImg =
-    recipe.author?.profilePictureUrl ||
+    recipe.author?.profilePicture ||
     "https://placehold.co/64x64/e0e0e0/757575?text=A";
 
   return (

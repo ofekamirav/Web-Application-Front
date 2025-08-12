@@ -84,7 +84,7 @@ export const Navbar = () => {
                 `${linkBase} ${
                   isActive
                     ? linkActive
-                    : "hover:text-gray-800 " + oliveTextHover
+                    : "hover:text-[#6e7a32] " + oliveTextHover
                 }`
               }
             >
@@ -93,35 +93,69 @@ export const Navbar = () => {
 
             {/* CTA – Create */}
             {user && (
-              <NavLink
-                to="/create-recipe"
-                className={({ isActive }) =>
-                  [
-                    "inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold text-white",
-                    oliveBg,
-                    oliveBgHover,
-                    "shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#808c3c]/70 hover:text-white",
-                    isActive ? "brightness-95" : "",
-                  ].join(" ")
-                }
-                aria-label="Create Recipe"
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  className="opacity-90"
-                  aria-hidden
+              <>
+                <NavLink
+                  to="/create-recipe"
+                  className={({ isActive }) =>
+                    [
+                      "inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold text-white",
+                      oliveBg,
+                      oliveBgHover,
+                      "shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#808c3c]/70 hover:text-white",
+                      isActive ? "brightness-95" : "",
+                    ].join(" ")
+                  }
+                  aria-label="Create Recipe"
                 >
-                  <path
-                    d="M12 5v14m-7-7h14"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                  />
-                </svg>
-                Create
-              </NavLink>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    className="opacity-90"
+                    aria-hidden
+                  >
+                    <path
+                      d="M12 5v14m-7-7h14"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  Create
+                </NavLink>
+                <NavLink
+                  to="/ai"
+                  className={({ isActive }) =>
+                    [
+                      "inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold transition-colors",
+                      isActive
+                        ? "bg-white ring-1 ring-[#808c3c] text-[#808c3c]"
+                        : "text-[#808c3c] ring-1 ring-[#808c3c] hover:bg-[#6e7a32] hover:text-white",
+                      "focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#808c3c]/70",
+                    ].join(" ")
+                  }
+                  aria-label="AI Assistant"
+                  title="AI Assistant"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="16"
+                    height="16"
+                    aria-hidden
+                    className="opacity-90"
+                  >
+                    <path
+                      d="M5 5l14 14M8 3l1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3zm10 10l1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3z"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  AI Assistant
+                </NavLink>
+              </>
             )}
 
             {!user ? (
@@ -292,6 +326,13 @@ export const Navbar = () => {
                   onClick={() => setIsMenuOpen(false)}
                 >
                   Create Recipe
+                </NavLink>
+                <NavLink
+                  to="/ai"
+                  className={mobileLink}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  AI Assistant
                 </NavLink>
                 <NavLink
                   to="/my-recipes"

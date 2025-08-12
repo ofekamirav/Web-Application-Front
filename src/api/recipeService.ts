@@ -3,7 +3,7 @@ import { axiosInstance } from './axiosInstance';
 export interface Author {
   _id: string;
   name: string;
-  profilePictureUrl?: string;
+  profilePicture?: string;
 }
 
 export interface Recipe {
@@ -24,36 +24,42 @@ export interface PaginatedRecipes {
   currentPage: number;
 }
 
+type ListParams = Partial<{ page: number; limit: number; author: string; title: string }>;
 
-export const apiGetRecipes = async (params?: Record<string, unknown>): Promise<PaginatedRecipes> => {
-  const response = await axiosInstance.get('/recipes', { params });
-  return response.data;
+
+export const apiGetRecipes = async (params?: ListParams): Promise<PaginatedRecipes> => {
+  const { data } = await axiosInstance.get<PaginatedRecipes>('/recipes', { params });
+  return data;
 };
 
 export const apiGetRecipeById = async (id: string): Promise<Recipe> => {
-  const response = await axiosInstance.get(`/recipes/${id}`);
-  return response.data;
+  const { data } = await axiosInstance.get<Recipe>(`/recipes/${id}`);
+  return data;
 };
 
 export const apiCreateRecipe = async (formData: FormData): Promise<Recipe> => {
-  const response = await axiosInstance.post('/recipes', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',  
-    },
-  });
-  return response.data;
+  const { data } = await axiosInstance.post<Recipe>('/recipes', formData);
+  return data;
 };
 
-export const apiUpdateRecipe = async (id: string, recipeData: Partial<Omit<Recipe, '_id' | 'createdAt'>>): Promise<Recipe> => {
-  const response = await axiosInstance.put(`/recipes/${id}`, recipeData);
-  return response.data;
+export const apiUpdateRecipe = async (
+  id: string,
+  recipeData: Partial<Omit<Recipe, '_id' | 'createdAt'>>
+): Promise<Recipe> => {
+  const { data } = await axiosInstance.put<Recipe>(`/recipes/${id}`, recipeData);
+  return data;
+};
+
+export const apiLikeRecipe = async (id: string): Promise<Recipe> => {
+  const { data } = await axiosInstance.post<Recipe>(`/recipes/${id}/like`);
+  return data;
+};
+
+export const apiGetMyRecipes = async (params?: ListParams): Promise<PaginatedRecipes> => {
+  const { data } = await axiosInstance.get<PaginatedRecipes>('/recipes/mine', { params });
+  return data;
 };
 
 export const apiDeleteRecipe = async (id: string): Promise<void> => {
   await axiosInstance.delete(`/recipes/${id}`);
-};
-
-export const apiLikeRecipe = async (id: string): Promise<Recipe> => {
-  const response = await axiosInstance.post(`/recipes/${id}/like`);
-  return response.data;
 };

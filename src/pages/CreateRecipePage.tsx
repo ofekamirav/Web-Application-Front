@@ -61,7 +61,9 @@ const CreateRecipePage = () => {
     setDragActive(false);
     const f = e.dataTransfer.files?.[0];
     if (f) {
-      setValue("image", [f] as unknown as FileList, {
+      const dt = new DataTransfer();
+      dt.items.add(f);
+      setValue("image", dt.files, {
         shouldDirty: true,
         shouldTouch: true,
         shouldValidate: true,
@@ -90,9 +92,11 @@ const CreateRecipePage = () => {
       )
     );
     formData.append("instructions", data.instructions.trim());
-    if (data.image?.[0]) {
-      formData.append("image", data.image[0]);
-    }
+
+    const file = fileInputRef.current?.files?.[0];
+    if (file) formData.append("image", file);
+
+    console.log("FD entries:", [...formData.entries()]);
 
     try {
       const newRecipe = await apiCreateRecipe(formData);

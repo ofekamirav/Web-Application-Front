@@ -1,17 +1,12 @@
-import { axiosInstance } from './axiosInstance';
+import { axiosInstance } from "./axiosInstance";
 
-export interface AiResponse {
-  recipe: {
-    title: string;
-    description: string;
-    imageUrl: string;
-    ingredients: string[];
-    instructions: string;
-  };
-}
-
-export const apiGenerateRecipe = async (prompt: string): Promise<AiResponse> => {
-  const response = await axiosInstance.post('/ai/generate-recipe', { prompt });
-  return response.data;
+export type AiSuggestion = {
+  title: string;
+  description: string;
+  instructions: string;
 };
 
+export async function apiSuggestRecipe(ingredients: string[]): Promise<AiSuggestion> {
+  const { data } = await axiosInstance.post("/ai/suggest-recipe", { ingredients });
+  return data as AiSuggestion;
+}
