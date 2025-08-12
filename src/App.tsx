@@ -14,6 +14,8 @@ import RecipeDetailsPage from "./components/RecipeDetailsPage";
 import CreateRecipePage from "./pages/CreateRecipePage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import SettingsPage from "./pages/SettingsPage";
+import MyRecipesPage from "./pages/MyRecipesPage";
+import AiRecipePage from "./pages/AiRecipePage";
 
 const MainLayout = () => {
   return (
@@ -58,6 +60,8 @@ function App() {
           <Route element={<ProtectedRoute />}>
             <Route path="/create-recipe" element={<CreateRecipePage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/ai" element={<AiRecipePage />} />
+            <Route path="/my-recipes" element={<MyRecipesPage />} />
           </Route>
         </Route>
       </Routes>

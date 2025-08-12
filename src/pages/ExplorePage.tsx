@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { apiGetRecipes, type Recipe } from "../api/recipeService";
 import { RecipeCard } from "../components/RecipeCard";
+import Lottie from "lottie-react";
+import loadingAnimation from "../assets/loading.json";
 
 const ExplorePage = () => {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
@@ -12,8 +14,12 @@ const ExplorePage = () => {
     const fetchRecipes = async () => {
       setIsLoading(true);
       setError(null);
+
+      const q = searchTerm.trim();
+      const params = q ? { title: q } : undefined;
+
       try {
-        const response = await apiGetRecipes({ title: searchTerm });
+        const response = await apiGetRecipes(params);
         setRecipes(response.data);
       } catch {
         setError("Failed to fetch recipes. Please try again later.");
@@ -22,11 +28,8 @@ const ExplorePage = () => {
       }
     };
 
-    const debounceFetch = setTimeout(() => {
-      fetchRecipes();
-    }, 500);
-
-    return () => clearTimeout(debounceFetch);
+    const id = setTimeout(fetchRecipes, 500);
+    return () => clearTimeout(id);
   }, [searchTerm]);
 
   return (
@@ -53,7 +56,13 @@ const ExplorePage = () => {
       {/* Recipes Grid */}
       <div>
         {isLoading ? (
-          <p className="text-center">Loading recipes...</p> // כאן אפשר להוסיף אנימציית טעינה
+          <div className="flex items-center justify-center min-h-screen">
+            <Lottie
+              animationData={loadingAnimation}
+              loop
+              style={{ height: 200 }}
+            />
+          </div>
         ) : error ? (
           <p className="text-center text-red-500">{error}</p>
         ) : recipes.length > 0 ? (
