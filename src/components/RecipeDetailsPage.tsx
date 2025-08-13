@@ -5,6 +5,8 @@ import type { Recipe } from "../api/recipeService";
 import {
   apiGetCommentsByRecipeId,
   apiCreateComment,
+  apiUpdateComment,
+  apiDeleteComment,
 } from "../api/commentService";
 import type { Comment } from "../api/commentService";
 import { useAuthStore } from "../store/authStore";
@@ -24,6 +26,8 @@ const RecipeDetailsPage = () => {
   const [newComment, setNewComment] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState("");
 
   const isModal = !!location.state?.backgroundLocation;
 
@@ -64,20 +68,57 @@ const RecipeDetailsPage = () => {
     if (!recipe || !user || !newComment.trim()) return;
     try {
       const created = await apiCreateComment(newComment.trim(), recipe._id);
-      setComments((prev) => [
-        {
-          ...created,
-          author: {
-            _id: user._id,
-            name: user.name,
-            profilePictureUrl: user.profilePicture,
-          },
-        },
-        ...prev,
-      ]);
+
+      const withAuthor: Comment = {
+        ...created,
+        author: created.author?._id
+          ? created.author
+          : {
+              _id: user._id,
+              name: user.name,
+              profilePicture: user.profilePicture,
+            },
+      } as Comment;
+
+      setComments((prev) => [withAuthor, ...prev]);
       setNewComment("");
     } catch (e) {
       console.error("Failed to post comment:", e);
+    }
+  };
+
+  const startEdit = (c: Comment) => {
+    setEditingId(c._id);
+    setEditingText(c.text);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditingText("");
+  };
+
+  const saveEdit = async () => {
+    if (!editingId || !editingText.trim()) return;
+    try {
+      const updated = await apiUpdateComment(editingId, editingText.trim());
+      setComments((prev) =>
+        prev.map((c) =>
+          c._id === editingId ? { ...c, text: updated.text } : c
+        )
+      );
+      cancelEdit();
+    } catch (e) {
+      console.error("Failed to update comment:", e);
+    }
+  };
+
+  const deleteComment = async (id: string) => {
+    if (!window.confirm("Delete this comment?")) return;
+    try {
+      await apiDeleteComment(id);
+      setComments((prev) => prev.filter((c) => c._id !== id));
+    } catch (e) {
+      console.error("Failed to delete comment:", e);
     }
   };
 
@@ -87,7 +128,7 @@ const RecipeDetailsPage = () => {
     recipe?.imageUrl ||
     "https://placehold.co/1200x800/eee/777?text=Recipe+Image";
   const authorImg =
-    recipe?.author?.profilePictureUrl ||
+    recipe?.author?.profilePicture ||
     "https://placehold.co/64x64/e0e0e0/757575?text=A";
 
   const content = (
@@ -218,7 +259,6 @@ const RecipeDetailsPage = () => {
                 <h3 className="text-lg font-semibold text-gray-900">
                   Comments ({comments.length})
                 </h3>
-
                 {user ? (
                   <form
                     onSubmit={handleCommentSubmit}
@@ -263,24 +303,75 @@ const RecipeDetailsPage = () => {
                 )}
 
                 <div className="mt-6 space-y-4">
-                  {comments.map((c) => (
-                    <div key={c._id} className="flex items-start gap-3">
-                      <img
-                        src={
-                          c.author.profilePictureUrl ||
-                          "https://placehold.co/40x40"
-                        }
-                        alt={c.author.name}
-                        className="w-10 h-10 rounded-full object-cover ring-1 ring-gray-200"
-                      />
-                      <div className="flex-1 rounded-2xl bg-gray-50 ring-1 ring-gray-200 p-3">
-                        <p className="text-sm font-semibold text-gray-900">
-                          {c.author.name}
-                        </p>
-                        <p className="text-gray-700">{c.text}</p>
+                  {comments.map((c) => {
+                    const isOwner = user?._id === c.author._id;
+                    const avatar =
+                      c.author.profilePicture || "https://placehold.co/40x40";
+
+                    return (
+                      <div key={c._id} className="flex items-start gap-3">
+                        <img
+                          src={avatar}
+                          alt={c.author.name}
+                          className="w-10 h-10 rounded-full object-cover ring-1 ring-gray-200"
+                        />
+                        <div className="flex-1 rounded-2xl bg-gray-50 ring-1 ring-gray-200 p-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <p className="text-sm font-semibold text-gray-900">
+                              {c.author.name}
+                            </p>
+
+                            {isOwner && (
+                              <div className="flex items-center gap-2">
+                                {editingId === c._id ? (
+                                  <>
+                                    <button
+                                      onClick={saveEdit}
+                                      className="text-xs font-semibold text-white px-2 py-1 rounded-md bg-[#808c3c]"
+                                    >
+                                      Save
+                                    </button>
+                                    <button
+                                      onClick={cancelEdit}
+                                      className="text-xs font-semibold text-gray-700 px-2 py-1 rounded-md ring-1 ring-gray-300 hover:bg-gray-100"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <button
+                                      onClick={() => startEdit(c)}
+                                      className="text-xs font-semibold text-gray-700 px-2 py-1 rounded-md ring-1 ring-gray-300 hover:bg-gray-100"
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                      onClick={() => deleteComment(c._id)}
+                                      className="text-xs font-semibold text-red-600 px-2 py-1 rounded-md hover:bg-red-50"
+                                    >
+                                      Delete
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            )}
+                          </div>
+
+                          {editingId === c._id ? (
+                            <textarea
+                              value={editingText}
+                              onChange={(e) => setEditingText(e.target.value)}
+                              className="mt-2 w-full rounded-xl border-gray-300 p-2 focus:border-gray-400 focus:ring-0"
+                              rows={2}
+                            />
+                          ) : (
+                            <p className="text-gray-700 mt-1">{c.text}</p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </section>

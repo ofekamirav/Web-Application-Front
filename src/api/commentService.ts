@@ -25,4 +25,8 @@ export const apiDeleteComment = async (commentId: string): Promise<void> => {
     await axiosInstance.delete(`/comments/${commentId}`);
 };
 
+export const apiUpdateComment = async (id: string, text: string): Promise<Comment> => {
+  const { data } = await axiosInstance.put<Comment>(`/comments/${id}`, { text });
+  return data;
+};
 

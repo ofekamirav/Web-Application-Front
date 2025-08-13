@@ -1,71 +1,97 @@
-import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
-import { useAuthStore } from '../store/authStore';
-import { apiRefresh } from './authService';
+import axios, {
+  AxiosError,
+  AxiosHeaders,
+  type InternalAxiosRequestConfig,
+  type AxiosHeaderValue,
+  type RawAxiosRequestHeaders,
+} from "axios";
 
 export const axiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000',
+  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:3000",
 });
 
-axiosInstance.interceptors.request.use((config) => {
-  const token = useAuthStore.getState().accessToken;
-  if (token) {
-    config.headers = config.headers ?? {};
-    config.headers.Authorization = `Bearer ${token}`;
+type Hooks = {
+  getAccessToken: () => string | null;
+  getRefreshToken: () => string | null;
+  setAccessToken: (t: string) => void;
+  setRefreshToken: (t: string) => void;
+  onLogout: () => Promise<void> | void;
+  refreshCall: (rt: string) => Promise<{ accessToken: string; refreshToken: string }>;
+};
+
+function setAuthHeader(config: InternalAxiosRequestConfig, token: string) {
+  if (!config.headers) {
+    config.headers = new AxiosHeaders();
+  } else if (!(config.headers instanceof AxiosHeaders)) {
+    const raw = config.headers as unknown as RawAxiosRequestHeaders;
+    const h = new AxiosHeaders();
+    for (const key in raw) {
+      const val = raw[key as keyof RawAxiosRequestHeaders] as AxiosHeaderValue | undefined;
+      if (val !== undefined) h.set(key, val);
+    }
+    config.headers = h;
   }
-  return config;
-});
+  (config.headers as AxiosHeaders).set("Authorization", `Bearer ${token}`);
+}
+export const attachAuthInterceptors = (hooks: Hooks) => {
+  axiosInstance.interceptors.request.use((config) => {
+    const token = hooks.getAccessToken();
+    if (token) {
+      setAuthHeader(config as InternalAxiosRequestConfig, token);
+    }
+    return config;
+  });
 
-let isRefreshing = false;
-let waiters: Array<(t: string) => void> = [];
+  let isRefreshing = false;
+  let waiters: Array<(t: string) => void> = [];
 
-axiosInstance.interceptors.response.use(
-  (res) => res,
-  async (error: AxiosError) => {
-    const original = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
-    const status = error.response?.status;
+  axiosInstance.interceptors.response.use(
+    (res) => res,
+    async (error: AxiosError) => {
+      const original =
+        error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
+      const status = error.response?.status;
 
-    if ((status === 401 || status === 403) && original && !original._retry) {
-      original._retry = true;
+      if ((status === 401 || status === 403) && original && !original._retry) {
+        original._retry = true;
 
-      const rt = localStorage.getItem('refreshToken');
-      if (!rt) {
-        await useAuthStore.getState().logout();
-        return Promise.reject(error);
-      }
-
-      try {
-        if (isRefreshing) {
-          return new Promise((resolve) => {
-            waiters.push((token) => {
-              original.headers = original.headers ?? {};
-              original.headers.Authorization = `Bearer ${token}`;
-              resolve(axiosInstance(original));
-            });
-          });
+        const rt = hooks.getRefreshToken();
+        if (!rt) {
+          await hooks.onLogout();
+          return Promise.reject(error);
         }
 
-        isRefreshing = true;
-        const { accessToken, refreshToken } = await apiRefresh(rt);
+        try {
+          if (isRefreshing) {
+            return new Promise((resolve, reject) => {
+              waiters.push((token) => {
+                setAuthHeader(original, token);
+                axiosInstance(original).then(resolve).catch(reject);
+              });
+            });
+          }
 
-        localStorage.setItem('refreshToken', refreshToken);
-        useAuthStore.setState({ accessToken });
-        axiosInstance.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
+          isRefreshing = true;
+          const { accessToken, refreshToken } = await hooks.refreshCall(rt);
 
-        waiters.forEach((cb) => cb(accessToken));
-        waiters = [];
-        isRefreshing = false;
+          hooks.setAccessToken(accessToken);
+          hooks.setRefreshToken(refreshToken);
 
-        original.headers = original.headers ?? {};
-        original.headers.Authorization = `Bearer ${accessToken}`;
-        return axiosInstance(original);
-      } catch (e) {
-        isRefreshing = false;
-        waiters = [];
-        await useAuthStore.getState().logout();
-        return Promise.reject(e);
+          waiters.forEach((cb) => cb(accessToken));
+          waiters = [];
+          isRefreshing = false;
+
+          setAuthHeader(original, accessToken);
+          return axiosInstance(original);
+        } catch (e) {
+          isRefreshing = false;
+          waiters = [];
+          await hooks.onLogout();
+          return Promise.reject(e);
+        }
       }
-    }
 
-    return Promise.reject(error);
-  }
-);
+      return Promise.reject(error);
+    }
+  );
+};

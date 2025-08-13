@@ -63,3 +63,15 @@ export const apiGetMyRecipes = async (params?: ListParams): Promise<PaginatedRec
 export const apiDeleteRecipe = async (id: string): Promise<void> => {
   await axiosInstance.delete(`/recipes/${id}`);
 };
+
+export const apiUpdateRecipeImage = async (id: string, file: File): Promise<Recipe> => {
+  const fd = new FormData();
+  fd.append('image', file);
+  const { data } = await axiosInstance.put<Recipe>(`/recipes/${id}/image`, fd);
+  return data;
+};
+
+export const apiGetLikedRecipes = async (params?: ListParams): Promise<PaginatedRecipes> => {
+  const { data } = await axiosInstance.get<PaginatedRecipes>('/recipes/liked', { params });
+  return data;
+};

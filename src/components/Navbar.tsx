@@ -259,6 +259,14 @@ export const Navbar = () => {
                         My Recipes
                       </Link>
                       <Link
+                        to="/liked"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-[#808c3c]"
+                        role="menuitem"
+                        onClick={() => setIsProfileOpen(false)}
+                      >
+                        Liked Recipes
+                      </Link>
+                      <Link
                         to="/settings"
                         className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-[#808c3c]  "
                         role="menuitem"
@@ -320,6 +328,13 @@ export const Navbar = () => {
 
             {user ? (
               <>
+                <NavLink
+                  to="/liked"
+                  className={mobileLink}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Liked
+                </NavLink>
                 <NavLink
                   to="/create-recipe"
                   className={mobileLink}
