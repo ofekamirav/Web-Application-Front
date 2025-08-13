@@ -16,6 +16,10 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import SettingsPage from "./pages/SettingsPage";
 import MyRecipesPage from "./pages/MyRecipesPage";
 import AiRecipePage from "./pages/AiRecipePage";
+import EditRecipePage from "./pages/EditRecipePage";
+import LikedRecipesPage from "./pages/LikedRecipesPage";
+import Footer from "./components/Footer";
+import AuthCallbackPage from "./pages/AuthCallbackPage";
 
 const MainLayout = () => {
   return (
@@ -24,6 +28,7 @@ const MainLayout = () => {
       <main className="container mx-auto px-4 py-8">
         <Outlet />
       </main>
+      <Footer />
     </>
   );
 };
@@ -47,6 +52,7 @@ function App() {
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/auth/callback" element={<AuthCallbackPage />} />
         </Route>
 
         {/* Main app routes - with navbar */}
@@ -62,6 +68,8 @@ function App() {
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/ai" element={<AiRecipePage />} />
             <Route path="/my-recipes" element={<MyRecipesPage />} />
+            <Route path="/edit-recipe/:id" element={<EditRecipePage />} />
+            <Route path="/liked" element={<LikedRecipesPage />} />
           </Route>
         </Route>
       </Routes>

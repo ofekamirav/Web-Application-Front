@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
-import { apiSuggestRecipe } from "../api/aiService";
+import { apiSuggestRecipe, type AiSuggestion } from "../api/aiService";
 import { apiCreateRecipe } from "../api/recipeService";
 import { useAuthStore } from "../store/authStore";
 
@@ -26,20 +26,16 @@ export default function AiRecipePage() {
   const [chipInput, setChipInput] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
-  const [suggestion, setSuggestion] = useState<{
-    title: string;
-    description: string;
-    instructions: string;
-  } | null>(null);
+  const [suggestion, setSuggestion] = useState<AiSuggestion | null>(null);
 
   const [imgPreview, setImgPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const prevUrlRef = useRef<string | null>(null);
 
   const {
     register,
     handleSubmit,
     reset,
-    watch,
     trigger,
     setValue,
     formState: { errors, isSubmitting },
@@ -54,11 +50,6 @@ export default function AiRecipePage() {
   });
 
   const { ref: imageRef, ...imageReg } = register("image");
-  const watchedImage = watch("image");
-  useEffect(() => {
-    if (watchedImage?.[0]) setImgPreview(URL.createObjectURL(watchedImage[0]));
-    else setImgPreview(null);
-  }, [watchedImage]);
 
   const canGenerate = useMemo(
     () => chips.filter((c) => c.trim()).length > 0,
@@ -79,6 +70,19 @@ export default function AiRecipePage() {
   };
   const removeChip = (v: string) => setChips((p) => p.filter((x) => x !== v));
 
+  const setPreviewFromFile = (file: File) => {
+    if (prevUrlRef.current) URL.revokeObjectURL(prevUrlRef.current);
+    const url = URL.createObjectURL(file);
+    prevUrlRef.current = url;
+    setImgPreview(url);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (prevUrlRef.current) URL.revokeObjectURL(prevUrlRef.current);
+    };
+  }, []);
+
   const handleGenerate = async () => {
     if (!canGenerate) return;
     setIsGenerating(true);
@@ -90,9 +94,15 @@ export default function AiRecipePage() {
       reset({
         title: s.title ?? "",
         description: s.description ?? "",
-        instructions: s.instructions ?? "",
+        instructions: Array.isArray(s.instructions)
+          ? s.instructions.join("\n")
+          : (s.instructions as unknown as string) ?? "",
         ingredientsText: chips.join("\n"),
       });
+      if (prevUrlRef.current) {
+        URL.revokeObjectURL(prevUrlRef.current);
+        prevUrlRef.current = null;
+      }
       setImgPreview(null);
     } catch (e: any) {
       console.error(e);
@@ -105,19 +115,35 @@ export default function AiRecipePage() {
   const onDropImage = (e: React.DragEvent) => {
     e.preventDefault();
     const f = e.dataTransfer.files?.[0];
-    if (f) {
-      const dt = new DataTransfer();
-      dt.items.add(f);
-      setValue("image", dt.files, {
-        shouldDirty: true,
-        shouldTouch: true,
-        shouldValidate: true,
-      });
-      setImgPreview(URL.createObjectURL(f));
-      trigger("image");
-    }
+    if (!f) return;
+
+    const dt = new DataTransfer();
+    dt.items.add(f);
+    setValue("image", dt.files, {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true,
+    });
+
+    setPreviewFromFile(f);
+    trigger("image");
   };
+
   const onChooseImage = () => fileInputRef.current?.click();
+
+  const clearImage = () => {
+    if (prevUrlRef.current) {
+      URL.revokeObjectURL(prevUrlRef.current);
+      prevUrlRef.current = null;
+    }
+    setImgPreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    setValue("image", undefined as unknown as FileList, {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true,
+    });
+  };
 
   const onPublish = handleSubmit(async (data) => {
     const ingredients = data.ingredientsText
@@ -368,7 +394,11 @@ export default function AiRecipePage() {
                     fileInputRef.current = el;
                   }}
                   className="hidden"
-                  onChange={() => trigger("image")}
+                  onChange={(e) => {
+                    imageReg.onChange?.(e); // עדכן RHF
+                    const f = (e.target as HTMLInputElement).files?.[0];
+                    if (f) setPreviewFromFile(f);
+                  }}
                 />
               </div>
             </div>
@@ -385,7 +415,7 @@ export default function AiRecipePage() {
                 type="button"
                 onClick={() => {
                   setSuggestion(null);
-                  setImgPreview(null);
+                  clearImage();
                 }}
                 className="inline-flex rounded-2xl px-5 py-2.5 text-sm font-semibold text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50"
               >

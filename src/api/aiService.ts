@@ -3,7 +3,7 @@ import { axiosInstance } from "./axiosInstance";
 export type AiSuggestion = {
   title: string;
   description: string;
-  instructions: string;
+  instructions: string[]; 
 };
 
 export async function apiSuggestRecipe(ingredients: string[]): Promise<AiSuggestion> {

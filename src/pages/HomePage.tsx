@@ -206,7 +206,7 @@ const HomePage = () => {
             to={user ? "/create-recipe" : "/register"}
             className={`inline-flex items-center gap-2 rounded-2xl px-6 py-3 hover:text-white text-white font-semibold shadow-sm ${olive} ${oliveHover}`}
           >
-            {user ? "Publish your first recipe" : "Join and start cooking"}
+            {user ? "Publish a new recipe" : "Join and start cooking"}
           </Link>
           <p className="mt-2 text-sm text-gray-600">
             It takes ~2 minutes to publish.

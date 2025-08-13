@@ -15,7 +15,6 @@ export interface CurrentUser {
     name: string;
     email: string;
     profilePicture?: string;
-    location?: string;
 }
 
 
