@@ -6,8 +6,9 @@ import axios, {
   type RawAxiosRequestHeaders,
 } from "axios";
 
+const backendUrl = import.meta.env.VITE_BACKEND_URL;
 export const axiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:3000",
+  baseURL: backendUrl,
 });
 
 type Hooks = {
