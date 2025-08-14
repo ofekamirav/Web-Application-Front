@@ -19,7 +19,6 @@ import AiRecipePage from "./pages/AiRecipePage";
 import EditRecipePage from "./pages/EditRecipePage";
 import LikedRecipesPage from "./pages/LikedRecipesPage";
 import Footer from "./components/Footer";
-import AuthCallbackPage from "./pages/AuthCallbackPage";
 
 const MainLayout = () => {
   return (
@@ -52,7 +51,6 @@ function App() {
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
-          <Route path="/auth/callback" element={<AuthCallbackPage />} />
         </Route>
 
         {/* Main app routes - with navbar */}

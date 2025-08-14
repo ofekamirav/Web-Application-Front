@@ -196,7 +196,7 @@ export default function AiRecipePage() {
         </div>
         <Link
           to="/my-recipes"
-          className={`hidden sm:inline-flex rounded-2xl px-4 py-2 text-sm font-semibold text-white ${oliveBg} ${oliveBgHover}`}
+          className={`hidden sm:inline-flex rounded-2xl px-4 py-2 text-sm font-semibold text-white hover:text-white ${oliveBg} ${oliveBgHover}`}
         >
           My Recipes
         </Link>

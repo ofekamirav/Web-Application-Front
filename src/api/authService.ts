@@ -36,3 +36,8 @@ export const apiRefresh = async (refreshToken: string) => {
     const response = await axiosInstance.post('/auth/refresh', { refreshToken });
     return response.data; 
 }
+
+export const apiGoogleSignin = async (credential: string): Promise<AuthResponse> => {
+  const res = await axiosInstance.post('/auth/google-signin', { credential });
+  return res.data;
+};
