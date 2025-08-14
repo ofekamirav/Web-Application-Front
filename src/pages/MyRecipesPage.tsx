@@ -172,7 +172,7 @@ export default function MyRecipesPage() {
         </div>
         <Link
           to="/create-recipe"
-          className={`inline-flex rounded-2xl px-4 py-2 text-sm font-semibold text-white ${oliveBg} ${oliveBgHover}`}
+          className={`inline-flex rounded-2xl px-4 py-2 text-sm font-semibold text-white hover:text-white ${oliveBg} ${oliveBgHover}`}
         >
           + Create new
         </Link>
@@ -231,7 +231,7 @@ export default function MyRecipesPage() {
           </p>
           <Link
             to="/create-recipe"
-            className={`mt-4 inline-flex rounded-2xl px-5 py-2.5 text-sm font-semibold text-white ${oliveBg} ${oliveBgHover}`}
+            className={`mt-4 inline-flex rounded-2xl px-5 py-2.5 text-sm font-semibold text-white hover:text-white ${oliveBg} ${oliveBgHover}`}
           >
             Create recipe
           </Link>

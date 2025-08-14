@@ -1,8 +1,9 @@
 import { create } from 'zustand';
-import { apiLogin, apiRegister, apiLogout, apiRefresh } from '../api/authService';
+import { apiLogin, apiRegister, apiLogout, apiRefresh, apiGoogleSignin } from '../api/authService';
 import { apiGetCurrentUserProfile } from '../api/userService';
 import { axiosInstance } from '../api/axiosInstance';
 import type { User } from '../interfaces/iUser';
+
 
 interface AuthState {
   user: User | null;
@@ -11,8 +12,8 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>;
   register: (formData: FormData) => Promise<void>;
   logout: () => Promise<void>;
+  googleSignin: (credential: string) => Promise<void>; 
   initializeAuth: () => Promise<void>;
-  handleAuthCallback: (accessToken: string, refreshToken: string) => Promise<void>;
   updateUser: (updates: Partial<User>) => void;
 }
 
@@ -49,10 +50,10 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ user: null, accessToken: null, isLoading: false });
   },
 
-  handleAuthCallback: async (accessToken: string, refreshToken: string) => {
+ googleSignin: async (credential: string) => {
+    const { user, accessToken, refreshToken } = await apiGoogleSignin(credential);
     localStorage.setItem('refreshToken', refreshToken);
     axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
-    const user = await apiGetCurrentUserProfile();
     set({ user, accessToken, isLoading: false });
   },
 

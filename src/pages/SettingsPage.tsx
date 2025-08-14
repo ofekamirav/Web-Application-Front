@@ -42,7 +42,7 @@ const oliveBgHover = "hover:bg-[#6e7a32]";
 const oliveText = "text-[#808c3c]";
 
 export default function SettingsPage() {
-  const { user, setUser, logout } = useAuthStore();
+  const { user, updateUser, logout } = useAuthStore();
   const [imgPreview, setImgPreview] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
@@ -109,7 +109,7 @@ export default function SettingsPage() {
         fd.append("profileImage", data.profileImage[0]);
       }
       const updated = await apiUpdateCurrentUserProfile(fd);
-      setUser(updated);
+      updateUser(updated);
     } catch (e) {
       console.error(e);
       alert("Failed to save profile.");
@@ -331,7 +331,7 @@ export default function SettingsPage() {
                 onClick={async () => {
                   try {
                     const fresh = await apiGetCurrentUserProfile();
-                    setUser(fresh);
+                    updateUser(fresh);
                     reset({ name: fresh.name, email: fresh.email });
                     setImgPreview(null);
                   } catch {
