@@ -1,4 +1,5 @@
 import { axiosInstance } from './axiosInstance';
+import { apiUploadFile } from './fileService';
 
 interface AuthResponse {
   user: {
@@ -18,13 +19,28 @@ export const apiLogin = async (email: string, password: string): Promise<AuthRes
 };
 
 
-export const apiRegister = async (formData: FormData) => {
-  const response = await axiosInstance.post('/auth/register', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
-  return response.data; 
+export const apiRegister = async (payload: {
+  name: string;
+  email: string;
+  password: string;
+  profilePicture?: string;
+}): Promise<AuthResponse> => {
+  const response = await axiosInstance.post('/auth/register', payload);
+  return response.data;
+};
+
+export const apiRegisterWithFile = async (
+  name: string,
+  email: string,
+  password: string,
+  file?: File
+): Promise<AuthResponse> => {
+  let profilePicture: string | undefined;
+  if (file) {
+    const { url } = await apiUploadFile(file, 'profile_pictures');
+    profilePicture = url;
+  }
+  return apiRegister({ name, email, password, profilePicture });
 };
 
 export const apiLogout = async (refreshToken: string): Promise<void> => {

@@ -151,15 +151,18 @@ export default function AiRecipePage() {
       .map((l) => l.trim())
       .filter(Boolean);
 
-    const fd = new FormData();
-    fd.append("title", data.title.trim());
-    fd.append("description", data.description.trim());
-    fd.append("ingredients", JSON.stringify(ingredients));
-    fd.append("instructions", data.instructions.trim());
-    if (data.image?.[0]) fd.append("image", data.image[0]);
+    const file = data.image?.[0];
 
     try {
-      const newRecipe = await apiCreateRecipe(fd);
+      const newRecipe = await apiCreateRecipe(
+        {
+          title: data.title.trim(),
+          description: data.description.trim(),
+          instructions: data.instructions.trim(),
+          ingredients,
+        },
+        file
+      );
       navigate(`/recipe/${newRecipe._id}`);
     } catch (e) {
       console.error(e);

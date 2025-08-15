@@ -1,4 +1,5 @@
 import { axiosInstance } from './axiosInstance';
+import { apiUploadFile } from './fileService';
 import type { Recipe } from './recipeService'; 
 
 export interface PublicUserProfile {
@@ -30,15 +31,25 @@ export const apiGetCurrentUserProfile = async (): Promise<CurrentUser> => {
 };
 
 
-export const apiUpdateCurrentUserProfile = async (formData: FormData): Promise<CurrentUser> => {
-    const response = await axiosInstance.put('/users/me', formData, {
-        headers: {
-            'Content-Type': 'multipart/form-data',
-        },
-    });
-    return response.data;
+export const apiUpdateCurrentUserProfile = async (payload: {
+  name?: string;
+  profilePicture?: string; 
+}): Promise<CurrentUser> => {
+  const response = await axiosInstance.put('/users/me', payload);
+  return response.data;
 };
 
+export const apiUpdateCurrentUserProfileWithFile = async (
+  name?: string,
+  file?: File
+): Promise<CurrentUser> => {
+  let profilePicture: string | undefined;
+  if (file) {
+    const { url } = await apiUploadFile(file, 'profile_pictures');
+    profilePicture = url;
+  }
+  return apiUpdateCurrentUserProfile({ name, profilePicture });
+};
 
 export const apiDeleteCurrentUser = async (): Promise<void> => {
     await axiosInstance.delete('/users/me');

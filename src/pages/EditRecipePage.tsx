@@ -4,10 +4,11 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   apiGetRecipeById,
   apiUpdateRecipe,
-  apiUpdateRecipeImage,
+  apiUpdateRecipeImageFromFile,
 } from "../api/recipeService";
 import { useAuthStore } from "../store/authStore";
 import { isAxiosError } from "axios";
+import { publicUrl } from "../utils/publicUrl";
 
 type EditForm = {
   title: string;
@@ -87,7 +88,7 @@ export default function EditRecipePage() {
     setImgUploading(true);
     setImgError(null);
     try {
-      const updated = await apiUpdateRecipeImage(id, file);
+      const updated = await apiUpdateRecipeImageFromFile(id, file);
       setImageUrl(updated.imageUrl);
     } catch (e: unknown) {
       console.error(e);
@@ -267,7 +268,7 @@ export default function EditRecipePage() {
                 <h3 className="text-sm font-semibold text-gray-700">Image</h3>
                 <img
                   src={
-                    imageUrl ||
+                    publicUrl(imageUrl) ||
                     "https://placehold.co/800x600/eee/777?text=Recipe+Image"
                   }
                   alt="Recipe"

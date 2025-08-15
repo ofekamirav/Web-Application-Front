@@ -5,9 +5,11 @@ import { useAuthStore } from "../store/authStore";
 import {
   apiGetCurrentUserProfile,
   apiUpdateCurrentUserProfile,
+  apiUpdateCurrentUserProfileWithFile,
   apiDeleteCurrentUser,
   apiUpdateCurrentUserPassword,
 } from "../api/userService";
+import { publicUrl } from "../utils/publicUrl";
 
 type ProfileForm = {
   name: string;
@@ -102,14 +104,16 @@ export default function SettingsPage() {
   const saveProfile = handleSubmit(async (data) => {
     setIsSavingProfile(true);
     try {
-      const fd = new FormData();
-      fd.append("name", data.name.trim());
-      fd.append("email", data.email.trim().toLowerCase());
-      if (data.profileImage?.[0]) {
-        fd.append("profileImage", data.profileImage[0]);
-      }
-      const updated = await apiUpdateCurrentUserProfile(fd);
+      const name = data.name.trim();
+      const file = data.profileImage?.[0];
+
+      const updated = file
+        ? await apiUpdateCurrentUserProfileWithFile(name, file)
+        : await apiUpdateCurrentUserProfile({ name });
+
       updateUser(updated);
+      reset({ name: updated.name, email: updated.email });
+      setImgPreview(null);
     } catch (e) {
       console.error(e);
       alert("Failed to save profile.");
@@ -236,23 +240,13 @@ export default function SettingsPage() {
                 </label>
                 <input
                   type="email"
-                  {...register("email", {
-                    required: "Email is required",
-                    pattern: {
-                      value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                      message: "Invalid email address",
-                    },
-                  })}
-                  className="w-full rounded-xl border-gray-300 p-3 focus:border-gray-400 focus:ring-0"
+                  {...register("email")}
+                  className="w-full rounded-xl border-gray-300 p-3 focus:border-gray-400 focus:ring-0 bg-gray-50"
                   placeholder="you@example.com"
+                  disabled
                 />
-                {errors.email && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {errors.email.message}
-                  </p>
-                )}
                 <p className="mt-1 text-xs text-gray-500">
-                  Changing email may require re-login.
+                  Email cannot be changed here.
                 </p>
               </div>
             </div>
@@ -285,7 +279,7 @@ export default function SettingsPage() {
                   <img
                     src={
                       imgPreview ??
-                      user.profilePicture ??
+                      publicUrl(user.profilePicture) ??
                       "https://placehold.co/120x120/e0e0e0/757575?text=Avatar"
                     }
                     alt="Profile preview"
@@ -335,8 +329,10 @@ export default function SettingsPage() {
                     reset({ name: fresh.name, email: fresh.email });
                     setImgPreview(null);
                   } catch {
-                    reset({ name: user.name, email: user.email });
-                    setImgPreview(null);
+                    if (user) {
+                      reset({ name: user.name, email: user.email });
+                      setImgPreview(null);
+                    }
                   }
                 }}
                 className="inline-flex rounded-2xl px-5 py-2.5 text-sm font-semibold text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50"
@@ -358,116 +354,14 @@ export default function SettingsPage() {
                 You signed in with Google. Password is managed by Google.
               </p>
             ) : (
-              <form onSubmit={changePassword} className="mt-4 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Current password
-                  </label>
-                  <input
-                    type="password"
-                    {...registerPwd("oldPassword", { required: "Required" })}
-                    className="w-full rounded-xl border-gray-300 p-3 focus:border-gray-400 focus:ring-0"
-                  />
-                  {pwdErrors.oldPassword && (
-                    <p className="mt-1 text-sm text-red-600">
-                      {pwdErrors.oldPassword.message}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    New password
-                  </label>
-                  <input
-                    type="password"
-                    {...registerPwd("newPassword", {
-                      required: "Password is required",
-                      minLength: {
-                        value: 6,
-                        message: "Password must be at least 6 characters long",
-                      },
-                      pattern: {
-                        value: /(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])/,
-                        message: "Password needs more complexity",
-                      },
-                    })}
-                    className="w-full rounded-xl border-gray-300 p-3 focus:border-gray-400 focus:ring-0"
-                  />
-                  {pwdErrors.newPassword && (
-                    <p className="mt-1 text-sm text-red-600">
-                      {pwdErrors.newPassword.message}
-                    </p>
-                  )}
-                </div>
-
-                <div className="text-xs space-y-1">
-                  <p
-                    className={
-                      pwdChecks.isLongEnough
-                        ? "text-green-600"
-                        : "text-gray-500"
-                    }
-                  >
-                    <CheckIcon /> At least 6 characters long
-                  </p>
-                  <p
-                    className={
-                      pwdChecks.hasLower ? "text-green-600" : "text-gray-500"
-                    }
-                  >
-                    <CheckIcon /> Contains a lowercase letter
-                  </p>
-                  <p
-                    className={
-                      pwdChecks.hasUpper ? "text-green-600" : "text-gray-500"
-                    }
-                  >
-                    <CheckIcon /> Contains an uppercase letter
-                  </p>
-                  <p
-                    className={
-                      pwdChecks.hasNumber ? "text-green-600" : "text-gray-500"
-                    }
-                  >
-                    <CheckIcon /> Contains a number
-                  </p>
-                  <p
-                    className={
-                      pwdChecks.hasSpecial ? "text-green-600" : "text-gray-500"
-                    }
-                  >
-                    <CheckIcon /> Contains a special character (!@#$%^&*)
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Confirm new password
-                  </label>
-                  <input
-                    type="password"
-                    {...registerPwd("confirmPassword", {
-                      required: "Required",
-                      validate: (v) => v === newPwd || "Passwords do not match",
-                    })}
-                    className="w-full rounded-xl border-gray-300 p-3 focus:border-gray-400 focus:ring-0"
-                  />
-                  {pwdErrors.confirmPassword && (
-                    <p className="mt-1 text-sm text-red-600">
-                      {pwdErrors.confirmPassword.message}
-                    </p>
-                  )}
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isChangingPassword}
-                  className={`mt-2 inline-flex rounded-2xl px-4 py-2 text-sm font-semibold text-white bg-[#808c3c] hover:bg-[#6e7a32] disabled:opacity-60`}
-                >
-                  {isChangingPassword ? "Changing…" : "Change password"}
-                </button>
-              </form>
+              <PasswordFormSection
+                registerPwd={registerPwd}
+                pwdErrors={pwdErrors}
+                newPwd={newPwd}
+                pwdChecks={pwdChecks}
+                isChangingPassword={isChangingPassword}
+                changePassword={changePassword}
+              />
             )}
           </section>
 
@@ -499,5 +393,112 @@ export default function SettingsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function PasswordFormSection({
+  registerPwd,
+  pwdErrors,
+  newPwd,
+  pwdChecks,
+  isChangingPassword,
+  changePassword,
+}: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+any) {
+  return (
+    <form onSubmit={changePassword} className="mt-4 space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Current password
+        </label>
+        <input
+          type="password"
+          {...registerPwd("oldPassword", { required: "Required" })}
+          className="w-full rounded-xl border-gray-300 p-3 focus:border-gray-400 focus:ring-0"
+        />
+        {pwdErrors.oldPassword && (
+          <p className="mt-1 text-sm text-red-600">
+            {pwdErrors.oldPassword.message}
+          </p>
+        )}
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          New password
+        </label>
+        <input
+          type="password"
+          {...registerPwd("newPassword", {
+            required: "Password is required",
+            minLength: {
+              value: 6,
+              message: "Password must be at least 6 characters long",
+            },
+            pattern: {
+              value: /(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])/,
+              message: "Password needs more complexity",
+            },
+          })}
+          className="w-full rounded-xl border-gray-300 p-3 focus:border-gray-400 focus:ring-0"
+        />
+        {pwdErrors.newPassword && (
+          <p className="mt-1 text-sm text-red-600">
+            {pwdErrors.newPassword.message}
+          </p>
+        )}
+      </div>
+
+      <div className="text-xs space-y-1">
+        <p
+          className={
+            pwdChecks.isLongEnough ? "text-green-600" : "text-gray-500"
+          }
+        >
+          <CheckIcon /> At least 6 characters long
+        </p>
+        <p className={pwdChecks.hasLower ? "text-green-600" : "text-gray-500"}>
+          <CheckIcon /> Contains a lowercase letter
+        </p>
+        <p className={pwdChecks.hasUpper ? "text-green-600" : "text-gray-500"}>
+          <CheckIcon /> Contains an uppercase letter
+        </p>
+        <p className={pwdChecks.hasNumber ? "text-green-600" : "text-gray-500"}>
+          <CheckIcon /> Contains a number
+        </p>
+        <p
+          className={pwdChecks.hasSpecial ? "text-green-600" : "text-gray-500"}
+        >
+          <CheckIcon /> Contains a special character (!@#$%^&*)
+        </p>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Confirm new password
+        </label>
+        <input
+          type="password"
+          {...registerPwd("confirmPassword", {
+            required: "Required",
+            validate: (v: string) => v === newPwd || "Passwords do not match",
+          })}
+          className="w-full rounded-xl border-gray-300 p-3 focus:border-gray-400 focus:ring-0"
+        />
+        {pwdErrors.confirmPassword && (
+          <p className="mt-1 text-sm text-red-600">
+            {pwdErrors.confirmPassword.message}
+          </p>
+        )}
+      </div>
+
+      <button
+        type="submit"
+        disabled={isChangingPassword}
+        className={`mt-2 inline-flex rounded-2xl px-4 py-2 text-sm font-semibold text-white ${oliveBg} ${oliveBgHover} disabled:opacity-60`}
+      >
+        {isChangingPassword ? "Changing…" : "Change password"}
+      </button>
+    </form>
   );
 }

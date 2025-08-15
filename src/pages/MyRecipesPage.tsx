@@ -6,6 +6,7 @@ import {
   apiDeleteRecipe,
   type Recipe,
 } from "../api/recipeService";
+import { publicUrl } from "../utils/publicUrl";
 
 const PAGE_SIZE = 8;
 
@@ -247,7 +248,7 @@ export default function MyRecipesPage() {
                 <div className="relative">
                   <img
                     src={
-                      r.imageUrl ||
+                      publicUrl(r.imageUrl) ||
                       "https://placehold.co/800x600/eee/777?text=Recipe+Image"
                     }
                     alt={r.title}
