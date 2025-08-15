@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { apiLogin, apiRegister, apiLogout, apiRefresh } from '../api/authService';
+import { apiGoogleSignin, apiLogin, apiLogout, apiRefresh, apiRegisterWithFile } from '../api/authService';
 import { apiGetCurrentUserProfile } from '../api/userService';
 import { axiosInstance } from '../api/axiosInstance';
 import type { User } from '../interfaces/iUser';
@@ -10,6 +10,7 @@ interface AuthState {
   isLoading: boolean; 
   login: (email: string, password: string) => Promise<void>;
   register: (formData: FormData) => Promise<void>;
+  googleSignin: (credential: string) => Promise<void>; 
   logout: () => Promise<void>;
   initializeAuth: () => Promise<void>; 
   updateUser: (updates: Partial<User>) => void;
@@ -27,9 +28,27 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
     set({ user, accessToken, isLoading: false });
   },
+  
+  googleSignin: async (credential: string) => {
+    const { user, accessToken, refreshToken } = await apiGoogleSignin(credential);
+    localStorage.setItem('refreshToken', refreshToken);
+    axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+    set({ user, accessToken, isLoading: false });
+  },
 
   register: async (formData: FormData) => {
-    const { user, accessToken, refreshToken } = await apiRegister(formData);
+    const name = formData.get('name') as string;
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+    const file = formData.get('profilePicture') as File | null;
+
+    const { user, accessToken, refreshToken } = await apiRegisterWithFile(
+      name, 
+      email, 
+      password, 
+      file || undefined
+    );
+    
     localStorage.setItem('refreshToken', refreshToken);
     axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
     set({ user, accessToken, isLoading: false });
@@ -59,7 +78,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   initializeAuth: async () => {
     const refreshToken = localStorage.getItem('refreshToken');
     if (!refreshToken) {
-      set({ isLoading: false }); // אין טוקן, סיימנו את הטעינה.
+      set({ isLoading: false }); 
       return;
     }
 
@@ -68,7 +87,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       localStorage.setItem('refreshToken', newRefreshToken);
       axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
       set({ user, accessToken, isLoading: false });
-    } catch (error) {
+    } catch {
       console.log("Initial refresh failed, user is logged out.");
       get().logout();
     }

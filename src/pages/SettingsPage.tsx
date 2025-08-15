@@ -1,15 +1,19 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useRef, useState } from "react";
-import { useForm } from "react-hook-form";
-import { Link } from "react-router-dom";
+import {
+  useForm,
+  type UseFormRegister,
+  type FieldErrors,
+} from "react-hook-form";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import {
-  apiGetCurrentUserProfile,
   apiUpdateCurrentUserProfile,
-  apiUpdateCurrentUserProfileWithFile,
   apiDeleteCurrentUser,
   apiUpdateCurrentUserPassword,
 } from "../api/userService";
 import { publicUrl } from "../utils/publicUrl";
+import { apiUploadFile } from "../api/fileService";
 
 type ProfileForm = {
   name: string;
@@ -45,6 +49,7 @@ const oliveText = "text-[#808c3c]";
 
 export default function SettingsPage() {
   const { user, updateUser, logout } = useAuthStore();
+  const navigate = useNavigate();
   const [imgPreview, setImgPreview] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
@@ -58,7 +63,6 @@ export default function SettingsPage() {
     register,
     handleSubmit,
     watch,
-    trigger,
     setValue,
     formState: { errors, isDirty },
     reset,
@@ -70,6 +74,7 @@ export default function SettingsPage() {
   });
 
   const { ref: imgRef, ...imgReg } = register("profileImage");
+
   useEffect(() => {
     return () => {
       if (imgPreview) URL.revokeObjectURL(imgPreview);
@@ -78,12 +83,17 @@ export default function SettingsPage() {
 
   const watchedImage = watch("profileImage");
   useEffect(() => {
-    if (watchedImage?.[0]) setImgPreview(URL.createObjectURL(watchedImage[0]));
-    else setImgPreview(null);
+    if (watchedImage?.[0]) {
+      setImgPreview(URL.createObjectURL(watchedImage[0]));
+    } else {
+      setImgPreview(null);
+    }
   }, [watchedImage]);
 
   useEffect(() => {
-    reset({ name: user?.name ?? "", email: user?.email ?? "" });
+    if (user) {
+      reset({ name: user.name, email: user.email });
+    }
     setImgPreview(null);
   }, [user, reset]);
 
@@ -99,48 +109,56 @@ export default function SettingsPage() {
         shouldTouch: true,
         shouldValidate: true,
       });
-      setImgPreview(URL.createObjectURL(f));
-      trigger("profileImage");
     }
   };
 
   const onChooseFile = () => fileInputRef.current?.click();
 
   const saveProfile = handleSubmit(async (data) => {
-  setIsSavingProfile(true);
-  try {
-    const name = data.name.trim();
-    const canChangeEmail = user.provider === 'Regular';
-    const email = canChangeEmail ? data.email.trim().toLowerCase() : undefined;
-    const file = data.profileImage?.[0];
+    setIsSavingProfile(true);
+    try {
+      let profilePicture: string | undefined = user?.profilePicture;
 
-    let updated;
-    if (file) {
-      updated = await apiUpdateCurrentUserProfileWithFile(
-        { name, email },
-        file
-      );
-    } else {
-      const payload: { name?: string; email?: string } = { name };
-      if (canChangeEmail && email) payload.email = email;
-      updated = await apiUpdateCurrentUserProfile(payload);
+      const file = data.profileImage?.[0];
+      if (file) {
+        const { url } = await apiUploadFile(file, "profile_pictures");
+        profilePicture = url;
+      }
+
+      const payload: {
+        name: string;
+        email?: string;
+        profilePicture?: string;
+      } = {
+        name: data.name.trim(),
+        profilePicture,
+      };
+
+      if (user?.provider === "Regular") {
+        payload.email = data.email;
+      }
+
+      const updated = await apiUpdateCurrentUserProfile(payload);
+
+      updateUser({
+        name: updated.name,
+        email: updated.email,
+        profilePicture: updated.profilePicture,
+      });
+
+      reset({
+        name: updated.name,
+        email: updated.email,
+        profileImage: undefined,
+      });
+      setImgPreview(null);
+      alert("Profile updated successfully!");
+    } catch (e: any) {
+      alert(e?.response?.data?.message || "Failed to update profile.");
+    } finally {
+      setIsSavingProfile(false);
     }
-
-    updateUser(updated);
-    reset({ name: updated.name, email: updated.email });
-    if (imgPreview) URL.revokeObjectURL(imgPreview);
-    setImgPreview(null);
-  } catch (e: any) {
-    console.error(e);
-    const msg =
-      e?.response?.status === 409
-        ? 'Email is already in use.'
-        : e?.response?.data?.message || 'Failed to save profile.';
-    alert(msg);
-  } finally {
-    setIsSavingProfile(false);
-  }
-});
+  });
 
   // ----- Change password form -----
   const {
@@ -164,18 +182,14 @@ export default function SettingsPage() {
   };
 
   const changePassword = handleSubmitPwd(
-    async ({ oldPassword, newPassword, confirmPassword }) => {
-      if (newPassword !== confirmPassword) {
-        alert("New password and confirmation do not match.");
-        return;
-      }
+    async ({ oldPassword, newPassword }) => {
       try {
         await apiUpdateCurrentUserPassword(oldPassword, newPassword);
         resetPwd();
         alert("Password changed successfully.");
-      } catch (e) {
+      } catch (e: any) {
         console.error(e);
-        alert("Failed to change password.");
+        alert(e?.response?.data?.message || "Failed to change password.");
       }
     }
   );
@@ -189,7 +203,7 @@ export default function SettingsPage() {
     try {
       await apiDeleteCurrentUser();
       await logout();
-      window.location.href = "/register";
+      navigate("/register");
     } catch (e) {
       console.error(e);
       alert("Failed to delete account.");
@@ -254,29 +268,22 @@ export default function SettingsPage() {
                   </p>
                 )}
               </div>
-            <input
-                type="email"
-                {...register("email", {
-                  ...(user.provider === 'Regular'
-                    ? {
-                        pattern: {
-                          value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                          message: "Invalid email address",
-                        },
-                      }
-                    : {}),
-                })}
-                className="w-full rounded-xl border-gray-300 p-3 focus:border-gray-400 focus:ring-0 bg-gray-50"
-                placeholder="you@example.com"
-                disabled={user.provider !== 'Regular'}
-              />
-                {errors.email && (
-                  <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
-                )}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  {...(user.provider === "Regular" ? register("email") : {})}
+                  defaultValue={user.email}
+                  className="w-full rounded-xl border-gray-300 p-3 focus:border-gray-400 focus:ring-0 bg-gray-50"
+                  placeholder="you@example.com"
+                  disabled={user.provider !== "Regular"}
+                />
                 <p className="mt-1 text-xs text-gray-500">
-                  {user.provider !== 'Regular'
-                    ? 'Email is managed by Google.'
-                    : 'Changing email may require re-login.'}
+                  {user.provider !== "Regular"
+                    ? "Email is managed by Google."
+                    : "Changing email is not supported."}
                 </p>
               </div>
             </div>
@@ -297,12 +304,11 @@ export default function SettingsPage() {
                 }}
                 onDrop={onDrop}
                 onClick={onChooseFile}
-                className={[
-                  "w-full rounded-2xl border-2 border-dashed p-6 transition cursor-pointer",
+                className={`w-full rounded-2xl border-2 border-dashed p-6 transition cursor-pointer ${
                   dragActive
                     ? "border-gray-400 bg-gray-50"
-                    : "border-gray-300 hover:border-gray-400",
-                ].join(" ")}
+                    : "border-gray-300 hover:border-gray-400"
+                }`}
                 role="button"
               >
                 <div className="flex items-center gap-4">
@@ -328,7 +334,7 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-               <input
+                <input
                   type="file"
                   accept="image/*"
                   {...imgReg}
@@ -337,22 +343,7 @@ export default function SettingsPage() {
                     fileInputRef.current = el;
                   }}
                   className="hidden"
-                  onChange={(e) => {
-                    imgReg.onChange?.(e);
-                
-                    const f = (e.target as HTMLInputElement).files?.[0];
-                    if (f) {
-                      setImgPreview(URL.createObjectURL(f));
-                    }
-                
-                    setValue('profileImage', (e.target as HTMLInputElement).files!, {
-                      shouldDirty: true,
-                      shouldTouch: true,
-                      shouldValidate: true,
-                    });
-                  }}
                 />
-
               </div>
             </div>
 
@@ -364,25 +355,6 @@ export default function SettingsPage() {
               >
                 {isSavingProfile ? "Saving…" : "Save changes"}
               </button>
-              <button
-                type="button"
-                onClick={async () => {
-                  try {
-                    const fresh = await apiGetCurrentUserProfile();
-                    updateUser(fresh);
-                    reset({ name: fresh.name, email: fresh.email });
-                    setImgPreview(null);
-                  } catch {
-                    if (user) {
-                      reset({ name: user.name, email: user.email });
-                      setImgPreview(null);
-                    }
-                  }
-                }}
-                className="inline-flex rounded-2xl px-5 py-2.5 text-sm font-semibold text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50"
-              >
-                Reset
-              </button>
             </div>
           </form>
         </section>
@@ -392,8 +364,7 @@ export default function SettingsPage() {
           <section className="rounded-2xl bg-white ring-1 ring-gray-200 shadow-sm p-6">
             <h2 className="text-lg font-semibold text-gray-900">Security</h2>
 
-            {typeof user.provider === "string" &&
-            user.provider !== "Regular" ? (
+            {user.provider !== "Regular" ? (
               <p className="mt-3 text-sm text-gray-600">
                 You signed in with Google. Password is managed by Google.
               </p>
@@ -440,6 +411,16 @@ export default function SettingsPage() {
   );
 }
 
+// Define props type for PasswordFormSection to remove 'any'
+interface PasswordFormSectionProps {
+  registerPwd: UseFormRegister<PasswordForm>;
+  pwdErrors: FieldErrors<PasswordForm>;
+  newPwd: string;
+  pwdChecks: { [key: string]: boolean };
+  isChangingPassword: boolean;
+  changePassword: (e?: React.BaseSyntheticEvent) => Promise<void>;
+}
+
 function PasswordFormSection({
   registerPwd,
   pwdErrors,
@@ -447,8 +428,7 @@ function PasswordFormSection({
   pwdChecks,
   isChangingPassword,
   changePassword,
-}: // eslint-disable-next-line @typescript-eslint/no-explicit-any
-any) {
+}: PasswordFormSectionProps) {
   return (
     <form onSubmit={changePassword} className="mt-4 space-y-4">
       <div>

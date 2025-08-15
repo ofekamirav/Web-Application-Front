@@ -1,3 +1,4 @@
+import type { User } from '../interfaces/iUser';
 import { axiosInstance } from './axiosInstance';
 import { apiUploadFile } from './fileService';
 import type { Recipe } from './recipeService'; 
@@ -11,22 +12,14 @@ export interface PublicUserProfile {
   recipes: Recipe[];
 }
 
-export interface CurrentUser {
-    _id: string;
-    name: string;
-    email: string;
-    profilePicture?: string;
-    provider?: string;
-}
-
 
 export const apiGetUserProfile = async (userId: string): Promise<PublicUserProfile> => {
   const response = await axiosInstance.get(`/users/${userId}`);
   return response.data;
 };
+  
 
-
-export const apiGetCurrentUserProfile = async (): Promise<CurrentUser> => {
+export const apiGetCurrentUserProfile = async (): Promise<User> => {
     const response = await axiosInstance.get('/users/me');
     return response.data;
 };
@@ -36,7 +29,7 @@ export const apiUpdateCurrentUserProfile = async (payload: {
   name?: string;
   email?: string;          
   profilePicture?: string; 
-}): Promise<CurrentUser> => {
+}): Promise<User> => {
   const { data } = await axiosInstance.put('/users/me', payload);
   return data;
 };
@@ -45,7 +38,7 @@ export const apiUpdateCurrentUserProfileWithFile = async (
   name?: string,
   file?: File,
   email?: string            
-): Promise<CurrentUser> => {
+): Promise<User> => {
   let profilePicture: string | undefined;
   if (file) {
     const { url } = await apiUploadFile(file, 'profile_pictures');
