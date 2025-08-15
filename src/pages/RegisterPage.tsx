@@ -3,7 +3,7 @@ import type { SubmitHandler } from "react-hook-form";
 import type { ChangeEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Lottie from "lottie-react";
 import loadingAnimation from "../assets/loading.json";
 import { GoogleLogin } from "@react-oauth/google";
@@ -44,6 +44,14 @@ const RegisterPage = () => {
   );
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
   const {
     register,
     handleSubmit,
@@ -64,19 +72,31 @@ const RegisterPage = () => {
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+
       setProfilePictureFile(file);
       setPreviewUrl(URL.createObjectURL(file));
     }
   };
+
   const onSubmit: SubmitHandler<RegisterFormInputs> = async (data) => {
     setIsLoading(true);
     setError(null);
 
     try {
-      await registerUser(
-        { name: data.name, email: data.email, password: data.password },
-        profilePictureFile
-      );
+      const formData = new FormData();
+      formData.append("name", data.name);
+      formData.append("email", data.email);
+      formData.append("password", data.password);
+
+      if (profilePictureFile) {
+        formData.append("profilePicture", profilePictureFile);
+      }
+
+      await registerUser(formData);
       navigate("/explore");
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
@@ -87,6 +107,7 @@ const RegisterPage = () => {
       setIsLoading(false);
     }
   };
+
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="flex flex-col xl:flex-row w-full max-w-6xl bg-white rounded-2xl shadow-xl overflow-hidden">
