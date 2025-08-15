@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import type { Recipe } from "../api/recipeService";
+import { publicUrl } from "../utils/publicUrl";
 
 interface RecipeCardProps {
   recipe: Recipe;
@@ -22,7 +23,7 @@ export const RecipeCard = ({ recipe }: RecipeCardProps) => {
     >
       <div className="relative">
         <img
-          src={img}
+          src={publicUrl(img)}
           alt={recipe.title}
           className="w-full aspect-[4/3] object-cover transition-transform duration-300 group-hover:scale-[1.03]"
           loading="lazy"
@@ -48,7 +49,7 @@ export const RecipeCard = ({ recipe }: RecipeCardProps) => {
 
         <div className="mt-3 flex items-center gap-2">
           <img
-            src={authorImg}
+            src={publicUrl(authorImg)}
             alt={recipe.author?.name ?? "Author"}
             className="w-7 h-7 rounded-full object-cover ring-1 ring-gray-200"
             loading="lazy"

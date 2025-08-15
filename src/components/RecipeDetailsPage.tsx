@@ -10,6 +10,7 @@ import {
 } from "../api/commentService";
 import type { Comment } from "../api/commentService";
 import { useAuthStore } from "../store/authStore";
+import { publicUrl } from "../utils/publicUrl";
 
 const olive = "bg-[#808c3c]";
 const oliveHover = "hover:bg-[#6e7a32]";
@@ -150,7 +151,7 @@ const RecipeDetailsPage = () => {
           {/* Hero image */}
           <div className="relative">
             <img
-              src={img}
+              src={publicUrl(img)}
               alt={recipe.title}
               className="w-full max-h-[520px] object-cover rounded-2xl"
             />
@@ -192,7 +193,7 @@ const RecipeDetailsPage = () => {
             </h1>
             <div className="flex items-center gap-3">
               <img
-                src={authorImg}
+                src={publicUrl(authorImg)}
                 alt={recipe.author.name}
                 className="w-10 h-10 rounded-full object-cover ring-1 ring-gray-200"
               />
@@ -265,7 +266,10 @@ const RecipeDetailsPage = () => {
                     className="mt-3 flex gap-3"
                   >
                     <img
-                      src={user.profilePicture || "https://placehold.co/40x40"}
+                      src={
+                        publicUrl(user.profilePicture) ||
+                        "https://placehold.co/40x40"
+                      }
                       alt="You"
                       className="w-10 h-10 rounded-full object-cover ring-1 ring-gray-200"
                     />
@@ -306,7 +310,8 @@ const RecipeDetailsPage = () => {
                   {comments.map((c) => {
                     const isOwner = user?._id === c.author._id;
                     const avatar =
-                      c.author.profilePicture || "https://placehold.co/40x40";
+                      publicUrl(c.author.profilePicture) ||
+                      "https://placehold.co/40x40";
 
                     return (
                       <div key={c._id} className="flex items-start gap-3">

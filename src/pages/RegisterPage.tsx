@@ -68,21 +68,15 @@ const RegisterPage = () => {
       setPreviewUrl(URL.createObjectURL(file));
     }
   };
-
   const onSubmit: SubmitHandler<RegisterFormInputs> = async (data) => {
     setIsLoading(true);
     setError(null);
 
-    const formData = new FormData();
-    formData.append("name", data.name);
-    formData.append("email", data.email);
-    formData.append("password", data.password);
-    if (profilePictureFile) {
-      formData.append("profilePicture", profilePictureFile);
-    }
-
     try {
-      await registerUser(formData);
+      await registerUser(
+        { name: data.name, email: data.email, password: data.password },
+        profilePictureFile
+      );
       navigate("/explore");
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
@@ -93,7 +87,6 @@ const RegisterPage = () => {
       setIsLoading(false);
     }
   };
-
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="flex flex-col xl:flex-row w-full max-w-6xl bg-white rounded-2xl shadow-xl overflow-hidden">

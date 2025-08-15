@@ -79,27 +79,23 @@ const CreateRecipePage = () => {
     setIsLoading(true);
     setError(null);
 
-    const formData = new FormData();
-    formData.append("title", data.title.trim());
-    formData.append("description", data.description.trim());
-    formData.append(
-      "ingredients",
-      JSON.stringify(
-        data.ingredients
-          .split("\n")
-          .map((l) => l.trim())
-          .filter(Boolean)
-      )
-    );
-    formData.append("instructions", data.instructions.trim());
+    const ingredients = data.ingredients
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean);
 
     const file = fileInputRef.current?.files?.[0];
-    if (file) formData.append("image", file);
-
-    console.log("FD entries:", [...formData.entries()]);
 
     try {
-      const newRecipe = await apiCreateRecipe(formData);
+      const newRecipe = await apiCreateRecipe(
+        {
+          title: data.title.trim(),
+          description: data.description.trim(),
+          instructions: data.instructions.trim(),
+          ingredients,
+        },
+        file 
+      );
       navigate(`/recipe/${newRecipe._id}`);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to create recipe.");

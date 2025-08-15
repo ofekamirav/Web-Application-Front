@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
+import { publicUrl } from "../utils/publicUrl";
 
 const olive = "text-[#808c3c]";
 const oliveBg = "bg-[#808c3c]";
@@ -198,7 +199,7 @@ export const Navbar = () => {
                 >
                   {user.profilePicture ? (
                     <img
-                      src={user.profilePicture}
+                      src={publicUrl(user.profilePicture)}
                       alt={`${user.name} avatar`}
                       className="h-8 w-8 rounded-full object-cover ring-1 ring-gray-200"
                     />
