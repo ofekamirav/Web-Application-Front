@@ -1,4 +1,3 @@
-// src/config.ts
 declare global {
   interface Window {
     __APP_CONFIG__?: {
