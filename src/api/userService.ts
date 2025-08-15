@@ -16,6 +16,7 @@ export interface CurrentUser {
     name: string;
     email: string;
     profilePicture?: string;
+    provider?: string;
 }
 
 
@@ -33,22 +34,24 @@ export const apiGetCurrentUserProfile = async (): Promise<CurrentUser> => {
 
 export const apiUpdateCurrentUserProfile = async (payload: {
   name?: string;
+  email?: string;          
   profilePicture?: string; 
 }): Promise<CurrentUser> => {
-  const response = await axiosInstance.put('/users/me', payload);
-  return response.data;
+  const { data } = await axiosInstance.put('/users/me', payload);
+  return data;
 };
 
 export const apiUpdateCurrentUserProfileWithFile = async (
   name?: string,
-  file?: File
+  file?: File,
+  email?: string            
 ): Promise<CurrentUser> => {
   let profilePicture: string | undefined;
   if (file) {
     const { url } = await apiUploadFile(file, 'profile_pictures');
-    profilePicture = url;
+    profilePicture = url; 
   }
-  return apiUpdateCurrentUserProfile({ name, profilePicture });
+  return apiUpdateCurrentUserProfile({ name, email, profilePicture });
 };
 
 export const apiDeleteCurrentUser = async (): Promise<void> => {
