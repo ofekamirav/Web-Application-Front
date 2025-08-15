@@ -1,14 +1,8 @@
-// src/utils/publicUrl.ts
-import { CONFIG } from "../config";
+import { API_BASE_URL } from '../config';
 
-export const publicApiBaseUrl = () => CONFIG.API_BASE_URL;
-
-export function publicUrl(u?: string | null) {
-  if (!u) return u ?? "";
-  if (/^https?:\/\//i.test(u)) return u;
-
-  const base = (CONFIG.API_BASE_URL || "").replace(/\/$/, "");
-  const path = u.replace(/^\/+/, "").replace(/\\/g, "/");
-
-  return base ? `${base}/${path}` : `/${path}`;
+export function fileUrl(p?: string | null): string {
+  if (!p) return '';
+  if (/^https?:\/\//i.test(p)) return p; 
+  const base = (API_BASE_URL || window.location.origin).replace(/\/$/, '');
+  return `${base}${p.startsWith('/') ? '' : '/'}${p}`;
 }
