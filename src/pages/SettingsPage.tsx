@@ -70,6 +70,11 @@ export default function SettingsPage() {
   });
 
   const { ref: imgRef, ...imgReg } = register("profileImage");
+  useEffect(() => {
+    return () => {
+      if (imgPreview) URL.revokeObjectURL(imgPreview);
+    };
+  }, [imgPreview]);
 
   const watchedImage = watch("profileImage");
   useEffect(() => {
@@ -102,25 +107,40 @@ export default function SettingsPage() {
   const onChooseFile = () => fileInputRef.current?.click();
 
   const saveProfile = handleSubmit(async (data) => {
-    setIsSavingProfile(true);
-    try {
-      const name = data.name.trim();
-      const file = data.profileImage?.[0];
+  setIsSavingProfile(true);
+  try {
+    const name = data.name.trim();
+    const canChangeEmail = user.provider === 'Regular';
+    const email = canChangeEmail ? data.email.trim().toLowerCase() : undefined;
+    const file = data.profileImage?.[0];
 
-      const updated = file
-        ? await apiUpdateCurrentUserProfileWithFile(name, file)
-        : await apiUpdateCurrentUserProfile({ name });
-
-      updateUser(updated);
-      reset({ name: updated.name, email: updated.email });
-      setImgPreview(null);
-    } catch (e) {
-      console.error(e);
-      alert("Failed to save profile.");
-    } finally {
-      setIsSavingProfile(false);
+    let updated;
+    if (file) {
+      updated = await apiUpdateCurrentUserProfileWithFile(
+        { name, email },
+        file
+      );
+    } else {
+      const payload: { name?: string; email?: string } = { name };
+      if (canChangeEmail && email) payload.email = email;
+      updated = await apiUpdateCurrentUserProfile(payload);
     }
-  });
+
+    updateUser(updated);
+    reset({ name: updated.name, email: updated.email });
+    if (imgPreview) URL.revokeObjectURL(imgPreview);
+    setImgPreview(null);
+  } catch (e: any) {
+    console.error(e);
+    const msg =
+      e?.response?.status === 409
+        ? 'Email is already in use.'
+        : e?.response?.data?.message || 'Failed to save profile.';
+    alert(msg);
+  } finally {
+    setIsSavingProfile(false);
+  }
+});
 
   // ----- Change password form -----
   const {
@@ -234,19 +254,29 @@ export default function SettingsPage() {
                   </p>
                 )}
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  {...register("email")}
-                  className="w-full rounded-xl border-gray-300 p-3 focus:border-gray-400 focus:ring-0 bg-gray-50"
-                  placeholder="you@example.com"
-                  disabled
-                />
+            <input
+                type="email"
+                {...register("email", {
+                  ...(user.provider === 'Regular'
+                    ? {
+                        pattern: {
+                          value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                          message: "Invalid email address",
+                        },
+                      }
+                    : {}),
+                })}
+                className="w-full rounded-xl border-gray-300 p-3 focus:border-gray-400 focus:ring-0 bg-gray-50"
+                placeholder="you@example.com"
+                disabled={user.provider !== 'Regular'}
+              />
+                {errors.email && (
+                  <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+                )}
                 <p className="mt-1 text-xs text-gray-500">
-                  Email cannot be changed here.
+                  {user.provider !== 'Regular'
+                    ? 'Email is managed by Google.'
+                    : 'Changing email may require re-login.'}
                 </p>
               </div>
             </div>
