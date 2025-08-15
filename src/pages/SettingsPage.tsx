@@ -275,15 +275,16 @@ export default function SettingsPage() {
                 <input
                   type="email"
                   {...(user.provider === "Regular" ? register("email") : {})}
-                  defaultValue={user.email}
-                  className="w-full rounded-xl border-gray-300 p-3 focus:border-gray-400 focus:ring-0 bg-gray-50"
+                  className={`w-full rounded-xl border-gray-300 p-3 focus:border-gray-400 focus:ring-0 ${
+                    user.provider !== "Regular" ? "bg-gray-50" : ""
+                  }`}
                   placeholder="you@example.com"
                   disabled={user.provider !== "Regular"}
                 />
                 <p className="mt-1 text-xs text-gray-500">
                   {user.provider !== "Regular"
                     ? "Email is managed by Google."
-                    : "Changing email is not supported."}
+                    : "You can change your email here."}
                 </p>
               </div>
             </div>

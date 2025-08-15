@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { apiGoogleSignin, apiLogin, apiLogout, apiRefresh, apiRegisterWithFile } from '../api/authService';
 import { apiGetCurrentUserProfile } from '../api/userService';
-import { axiosInstance } from '../api/axiosInstance';
+import { attachAuthInterceptors, axiosInstance } from '../api/axiosInstance';
 import type { User } from '../interfaces/iUser';
 
 interface AuthState {
@@ -76,22 +76,32 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   initializeAuth: async () => {
-    const refreshToken = localStorage.getItem('refreshToken');
-    if (!refreshToken) {
-      set({ isLoading: false }); 
-      return;
-    }
+  const refreshToken = localStorage.getItem('refreshToken');
+  if (!refreshToken) {
+    set({ isLoading: false });
+    return;
+  }
 
-    try {
-      const { user, accessToken, refreshToken: newRefreshToken } = await apiRefresh(refreshToken);
-      localStorage.setItem('refreshToken', newRefreshToken);
-      axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
-      set({ user, accessToken, isLoading: false });
-    } catch {
-      console.log("Initial refresh failed, user is logged out.");
-      get().logout();
+  try {
+    const { accessToken, refreshToken: newRefreshToken } = await apiRefresh(refreshToken);
+    localStorage.setItem('refreshToken', newRefreshToken);
+    axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+
+    const user = await apiGetCurrentUserProfile();
+
+    set({ user, accessToken, isLoading: false });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (err: any) {
+    const status = err?.response?.status;
+    if (status === 401 || status === 403) {
+      await get().logout();
+    } else {
+      console.warn('Refresh failed (probably network). Keeping anonymous state.');
+      set({ isLoading: false });
     }
-  },
+  }
+},
+
   
   updateUser: (updates: Partial<User>) => {
       set((state) => ({
@@ -100,15 +110,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 }));
 
-useAuthStore.getState().initializeAuth();
+declare global { interface Window { __AUTH_INT_ATTACHED__?: boolean } }
 
-if (typeof window !== 'undefined') {
-  window.addEventListener('storage', (event) => {
-    if (event.key === 'refreshToken') {
-      if (event.newValue === null && event.oldValue !== null) {
-        console.log("Detected logout from another tab. Logging out here as well.");
-        useAuthStore.getState().logout();
-      }
-    }
+if (typeof window !== 'undefined' && !window.__AUTH_INT_ATTACHED__) {
+  attachAuthInterceptors({
+    getAccessToken: () => useAuthStore.getState().accessToken,
+    getRefreshToken: () => localStorage.getItem('refreshToken'),
+    setAccessToken: (t) => useAuthStore.setState({ accessToken: t }),
+    setRefreshToken: (t) => localStorage.setItem('refreshToken', t),
+    onLogout: () => useAuthStore.getState().logout(),
+    refreshCall: (rt) => apiRefresh(rt),
   });
+  window.__AUTH_INT_ATTACHED__ = true;
 }
+
