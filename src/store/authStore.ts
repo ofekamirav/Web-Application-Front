@@ -1,15 +1,21 @@
+// src/store/authStore.ts
 import { create } from 'zustand';
-import { apiLogin, apiRegister, apiLogout, apiRefresh, apiGoogleSignin } from '../api/authService';
+import {
+  apiLogin,
+  apiRegister,
+  apiLogout,
+  apiRefresh,
+  apiGoogleSignin,
+} from '../api/authService';
 import { apiGetCurrentUserProfile } from '../api/userService';
 import { apiUploadFile } from '../api/fileService';
 import type { User } from '../interfaces/iUser';
-import { setAuthHeader } from '../api/axiosAuth';
+import { axiosInstance, attachAuthInterceptors } from '../api/axiosInstance';
 
 interface AuthState {
   user: User | null;
   accessToken: string | null;
   isLoading: boolean;
-
   login: (email: string, password: string) => Promise<void>;
   register: (
     payload: { name: string; email: string; password: string },
@@ -31,12 +37,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   login: async (email, password) => {
     const myEpoch = ++authEpoch;
     const { user, accessToken, refreshToken } = await apiLogin(email, password);
-
-    // אם היה בינתיים logout/login אחר — אל תדרוס state
     if (authEpoch !== myEpoch) return;
 
     localStorage.setItem('refreshToken', refreshToken);
-    setAuthHeader(accessToken);
+    axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
 
     set({ user, accessToken, isLoading: false });
   },
@@ -47,7 +51,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     let profilePicture: string | undefined;
     if (profilePictureFile) {
       const { url } = await apiUploadFile(profilePictureFile, 'profile_pictures');
-      profilePicture = url; 
+      profilePicture = url;
     }
 
     const { user, accessToken, refreshToken } = await apiRegister({
@@ -56,11 +60,10 @@ export const useAuthStore = create<AuthState>((set) => ({
       password,
       profilePicture,
     });
-
     if (authEpoch !== myEpoch) return;
 
     localStorage.setItem('refreshToken', refreshToken);
-    setAuthHeader(accessToken);
+    axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
 
     set({ user, accessToken, isLoading: false });
   },
@@ -68,27 +71,26 @@ export const useAuthStore = create<AuthState>((set) => ({
   logout: async () => {
     const myEpoch = ++authEpoch;
 
-    const refreshToken = localStorage.getItem('refreshToken');
+    const rt = localStorage.getItem('refreshToken');
     try {
-      if (refreshToken) await apiLogout(refreshToken);
+      if (rt) await apiLogout(rt);
     } catch (e) {
-      console.warn('Server logout failed, clearing locally anyway.', e);
+      console.warn('Logout failed on server, clearing locally anyway.', e);
     } finally {
       if (authEpoch !== myEpoch) return;
       localStorage.removeItem('refreshToken');
-      setAuthHeader(null);
+      delete axiosInstance.defaults.headers.common['Authorization'];
       set({ user: null, accessToken: null, isLoading: false });
     }
   },
 
   googleSignin: async (credential) => {
     const myEpoch = ++authEpoch;
-
     const { user, accessToken, refreshToken } = await apiGoogleSignin(credential);
     if (authEpoch !== myEpoch) return;
 
     localStorage.setItem('refreshToken', refreshToken);
-    setAuthHeader(accessToken);
+    axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
 
     set({ user, accessToken, isLoading: false });
   },
@@ -96,18 +98,18 @@ export const useAuthStore = create<AuthState>((set) => ({
   initializeAuth: async () => {
     const myEpoch = authEpoch;
 
-    const refreshToken = localStorage.getItem('refreshToken');
-    if (!refreshToken) {
+    const rt = localStorage.getItem('refreshToken');
+    if (!rt) {
       set({ isLoading: false });
       return;
     }
 
     try {
-      const { accessToken, refreshToken: newRefreshToken } = await apiRefresh(refreshToken);
+      const { accessToken, refreshToken: newRT } = await apiRefresh(rt);
       if (authEpoch !== myEpoch) return;
 
-      localStorage.setItem('refreshToken', newRefreshToken);
-      setAuthHeader(accessToken);
+      localStorage.setItem('refreshToken', newRT);
+      axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
 
       const me = await apiGetCurrentUserProfile();
       if (authEpoch !== myEpoch) return;
@@ -117,27 +119,38 @@ export const useAuthStore = create<AuthState>((set) => ({
       if (authEpoch !== myEpoch) return;
 
       localStorage.removeItem('refreshToken');
-      setAuthHeader(null);
+      delete axiosInstance.defaults.headers.common['Authorization'];
       set({ user: null, accessToken: null, isLoading: false });
     }
   },
 
   updateUser: (updates) =>
-    set((state) => ({
-      user: state.user ? { ...state.user, ...updates } : null,
+    set((s) => ({
+      user: s.user ? { ...s.user, ...updates } : null,
     })),
 }));
 
+attachAuthInterceptors({
+  getAccessToken: () => useAuthStore.getState().accessToken,
+  getRefreshToken: () => localStorage.getItem('refreshToken'),
+  setAccessToken: (t: string) => {
+    useAuthStore.setState({ accessToken: t });
+    axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${t}`;
+  },
+  setRefreshToken: (t: string) => localStorage.setItem('refreshToken', t),
+  onLogout: () => useAuthStore.getState().logout(),
+  refreshCall: (rt: string) => apiRefresh(rt),
+});
 
+useAuthStore.getState().initializeAuth();
+
+// סנכרון טאבים
 if (typeof window !== 'undefined') {
   window.addEventListener('storage', (e) => {
     if (e.key === 'refreshToken') {
       const hasToken = !!e.newValue;
-      if (hasToken) {
-        useAuthStore.getState().initializeAuth();
-      } else {
-        useAuthStore.getState().logout();
-      }
+      if (hasToken) useAuthStore.getState().initializeAuth();
+      else useAuthStore.getState().logout();
     }
   });
 }
