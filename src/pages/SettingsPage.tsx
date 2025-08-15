@@ -298,7 +298,7 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                <input
+               <input
                   type="file"
                   accept="image/*"
                   {...imgReg}
@@ -307,8 +307,22 @@ export default function SettingsPage() {
                     fileInputRef.current = el;
                   }}
                   className="hidden"
-                  onChange={() => trigger("profileImage")}
+                  onChange={(e) => {
+                    imgReg.onChange?.(e);
+                
+                    const f = (e.target as HTMLInputElement).files?.[0];
+                    if (f) {
+                      setImgPreview(URL.createObjectURL(f));
+                    }
+                
+                    setValue('profileImage', (e.target as HTMLInputElement).files!, {
+                      shouldDirty: true,
+                      shouldTouch: true,
+                      shouldValidate: true,
+                    });
+                  }}
                 />
+
               </div>
             </div>
 
