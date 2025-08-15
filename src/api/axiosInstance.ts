@@ -7,39 +7,45 @@ import axios, {
 } from "axios";
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:4000";
+
 export const axiosInstance = axios.create({
   baseURL: backendUrl,
 });
 
-type Hooks = {
+export type RefreshResult = { accessToken: string; refreshToken: string };
+
+export type Hooks = {
   getAccessToken: () => string | null;
   getRefreshToken: () => string | null;
   setAccessToken: (t: string) => void;
   setRefreshToken: (t: string) => void;
   onLogout: () => Promise<void> | void;
-  refreshCall: (rt: string) => Promise<{ accessToken: string; refreshToken: string }>;
+  refreshCall: (rt: string) => Promise<RefreshResult>;
 };
 
 function setAuthHeader(config: InternalAxiosRequestConfig, token: string) {
-  if (!config.headers) {
-    config.headers = new AxiosHeaders();
-  } else if (!(config.headers instanceof AxiosHeaders)) {
-    const raw = config.headers as unknown as RawAxiosRequestHeaders;
+  let headers = config.headers;
+  if (!headers) {
+    headers = new AxiosHeaders();
+  } else if (!(headers instanceof AxiosHeaders)) {
+    const raw = headers as unknown as RawAxiosRequestHeaders;
     const h = new AxiosHeaders();
     for (const key in raw) {
-      const val = raw[key as keyof RawAxiosRequestHeaders] as AxiosHeaderValue | undefined;
+      const val = raw[key as keyof RawAxiosRequestHeaders] as
+        | AxiosHeaderValue
+        | undefined;
       if (val !== undefined) h.set(key, val);
     }
-    config.headers = h;
+    headers = h;
   }
-  (config.headers as AxiosHeaders).set("Authorization", `Bearer ${token}`);
+  (headers as AxiosHeaders).set("Authorization", `Bearer ${token}`);
+  config.headers = headers;
 }
+
 export const attachAuthInterceptors = (hooks: Hooks) => {
   axiosInstance.interceptors.request.use((config) => {
     const token = hooks.getAccessToken();
-    if (token) {
-      setAuthHeader(config as InternalAxiosRequestConfig, token);
-    }
+    if (token) setAuthHeader(config as InternalAxiosRequestConfig, token);
     return config;
   });
 
@@ -49,8 +55,9 @@ export const attachAuthInterceptors = (hooks: Hooks) => {
   axiosInstance.interceptors.response.use(
     (res) => res,
     async (error: AxiosError) => {
-      const original =
-        error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
+      const original = error.config as
+        | (InternalAxiosRequestConfig & { _retry?: boolean })
+        | undefined;
       const status = error.response?.status;
 
       if ((status === 401 || status === 403) && original && !original._retry) {
